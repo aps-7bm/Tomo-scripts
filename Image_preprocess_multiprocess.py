@@ -78,9 +78,10 @@ class Writer_Consumer(multiprocessing.Process):
     def __init__(self, task_queue,hdf_filename,data_shape):
         multiprocessing.Process.__init__(self)
         self.task_queue = task_queue
-        self.hdf_file = h5py.File(hdf_filename,'w')
-        self.hdf_file.create_dataset('Prefiltered_images',data_shape,dtype=np.uint16)
-        self.dataset = self.hdf_file['Prefiltered_images']
+        self.hdf_filename = hdf_filename
+        with h5py.File(hdf_filename,'w') as hdf_file:
+            hdf_file.create_dataset('Prefiltered_images',data_shape,dtype=np.uint16)
+        #self.dataset = self.hdf_file['Prefiltered_images']
  
     def run(self):
         while True:
@@ -88,11 +89,9 @@ class Writer_Consumer(multiprocessing.Process):
             if next_task is None:
                 # Poison pill means shutdown
                 print('Exiting writer.')
-                self.hdf_file.close()
                 self.task_queue.task_done()
-                print("Output HDF5 file closed.")
                 break
-            next_task(self.dataset)
+            next_task(self.hdf_filename)
             self.task_queue.task_done()
         return
  
@@ -102,9 +101,11 @@ class Writer_Task():
     def __init__(self, projection, image_data):
         self.projection = projection
         self.image_data = image_data
-    def __call__(self,output_dataset):
+        
+    def __call__(self,hdf_filename):
         #Write data to the hdf_dataset
-        output_dataset[self.projection,...] = self.image_data
+        with h5py.File(hdf_filename,'r+') as hdf_file:
+            hdf_file['Prefiltered_images'][self.projection,...] = self.image_data
         return
      
 
@@ -124,8 +125,6 @@ def fprocess_hdf_stack(hdf_filenames,output_filename=''):
         file_list.append(h5py.File(fname,'r'))
         #Make an array of datasets to be used for reading data
         data_list.append(file_list[-1]['entry']['data']['data'])
-    working_array = np.empty((len(hdf_filenames),data_list[0].shape[1],data_list[0].shape[2]))
-    print(working_array.shape)
     
     #Open up an output HDF5 file
     if not output_filename:
@@ -148,9 +147,11 @@ def fprocess_hdf_stack(hdf_filenames,output_filename=''):
     
     #Loop through the projection angles
     for i in range(data_list[0].shape[0]):
+        working_array = np.empty((len(hdf_filenames),data_list[0].shape[1],data_list[0].shape[2]))
         if i % 10 == 0:
-            print("Starting on projection {0:4d} of {1:4d}".format(i,data_list[0].shape[0]))
-            print("Queuing: {0:d} ready for zinger removal, {1:d} ready to write.".format(raw_queue.qsize(),prefiltered_queue.qsize()))
+            print("Starting on projection {0:d} of {1:d}".format(i,data_list[0].shape[0]))
+            print("Queuing: {0:d} ready for zinger removal, {1:d} ready to write.".format(
+                                        raw_queue.qsize(),prefiltered_queue.qsize()))
         for j in range(len(hdf_filenames)):
             working_array[j,...] = data_list[j][i,...]
         raw_queue.put(Angle_Task(i,working_array))
@@ -200,7 +201,3 @@ if __name__ == '__main__':
     fprocess_hdf_stack(raw_images_filenames)
     fprocess_hdf_bright_dark(bright_filename)
     fprocess_hdf_bright_dark(dark_filename)
-
-
-
-    
