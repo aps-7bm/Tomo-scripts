@@ -1,0 +1,19 @@
+April 12, 2017
+* Doing some tests of reconstruction algorithms and filters.
+* For reference, use rows 940-950 of the Cummins injector dataset from 2017-1: 1500 angles when reregistered.
+* First test: no zero pad, Gridrec reconstruction, Parzen filter.  Save in reconstruction_test
+* Next test: zero pad to 2 * the width, Gridrec, Parzen filter.  Save in reconstruction_test_padded
+* Next test: zero pad to 2 * the width, Gridrec, Shepp filter.  Save in reconstruction_test_shepp.
+* Also tried the ramlak filter.  Also really bad results.
+    - This one turned out really bad.  Very high noise in the reconstruction.
+* Take a closer look at the first two reconstructions.
+    - The zero padding makes the background really zero.
+    - Zero padding also increases the density values from 0.74 to 0.85.
+* Why is the density value < 1?
+    - If I do everything correctly and this is really iron, the denisty values should be unity.
+    - The pathlengths are in microns, not pixels.
+    - Check row 1150: diameter is 2463 pixels and the pathlength is 3340 microns.
+    - This should give a density of around 1.16 if I had the pixel values scaled right.
+    - Reconstruction gives a density of around 0.92.  WTF!  This should be 1.36, since I haven't scaled the pathlengths to pixels yet!
+    - Try scaling the pathlength values and rerunning the reconstruction.  The reconstructed density values decreased by a proportional amount.
+    - 
