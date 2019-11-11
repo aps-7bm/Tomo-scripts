@@ -187,12 +187,12 @@ def fprocess_hdf_stack(hdf_filenames,output_filename,chunksize):
         if i + chunksize >= total_dataset_shape[0]:
             chunk = range(i, total_dataset_shape[0])
         print([len(file_list), len(chunk), total_dataset_shape[1], total_dataset_shape[2]])
-        data_array = np.empty([len(file_list), len(chunk), total_dataset_shape[1], total_dataset_shape[2]], dtype=np.uint16)
+        data_array = np.empty([len(chunk), len(file_list), total_dataset_shape[1], total_dataset_shape[2]], dtype=np.uint16)
         print('Starting to read in data for this chunk.')
         time0 = time.time()
         for i, files in enumerate(file_list):
-            data_array[i,...] = files['/exchange/data/'][chunk,...]
-        data_array = np.swapaxes(data_array, 0, 1)
+            data_array[:,i,...] = files['/exchange/data/'][chunk,...]
+        #data_array = np.swapaxes(data_array, 0, 1)
         data_list = [data_array[iL, ...] for iL in range(data_array.shape[0])]
         print("Elapsed time to load images %i-%i is %0.2f minutes." %(chunk[0],chunk[-1],(time.time() - time0)/60))
         
